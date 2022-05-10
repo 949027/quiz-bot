@@ -1,3 +1,4 @@
+import logging
 import random
 
 from environs import Env
@@ -11,6 +12,10 @@ from questions import get_quiz_set
 
 env = Env()
 env.read_env()
+
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 redis_client = redis.Redis(
     host=env('REDIS_URL'),
@@ -93,17 +98,20 @@ def main():
 
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
-            if not redis_client.get(f'score_{event.user_id}'):
-                redis_client.set(f'score_{event.user_id}', 0)
+            try:
+                if not redis_client.get(f'score_{event.user_id}'):
+                    redis_client.set(f'score_{event.user_id}', 0)
 
-            if event.text == 'Новый вопрос':
-                ask_question(event, vk_api, keyboard, quiz_set)
-            elif event.text == 'Сдаться':
-                skip_question(event, vk_api, keyboard, quiz_set)
-            elif event.text == 'Мой счет':
-                show_score(event, vk_api, keyboard)
-            else:
-                check_answer(event, vk_api, keyboard, quiz_set)
+                if event.text == 'Новый вопрос':
+                    ask_question(event, vk_api, keyboard, quiz_set)
+                elif event.text == 'Сдаться':
+                    skip_question(event, vk_api, keyboard, quiz_set)
+                elif event.text == 'Мой счет':
+                    show_score(event, vk_api, keyboard)
+                else:
+                    check_answer(event, vk_api, keyboard, quiz_set)
+            except Exception as err:
+                logger.exception(err)
 
 
 if __name__ == "__main__":
