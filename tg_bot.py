@@ -6,7 +6,7 @@ import random
 from environs import Env
 import redis
 
-from questions import *
+from questions import get_quiz_set
 
 env = Env()
 env.read_env()
@@ -24,21 +24,27 @@ redis_client = redis.Redis(
     port=env('REDIS_PORT'),
     charset='utf-8',
     decode_responses=True,
-    # username=env('REDIS_USERNAME'),
-    # password=env('REDIS_PASSWORD'),
+    username=env('REDIS_USERNAME'),
+    password=env('REDIS_PASSWORD'),
 )
+
+quiz_set = get_quiz_set()
 
 
 def start(bot, update):
     chat_id = update.message.chat_id
     redis_client.set(f'score_{chat_id}', 0)
-    bot.send_message(chat_id=chat_id, text='Привет! Давай сыграем!', reply_markup=reply_markup)
+    bot.send_message(
+        chat_id=chat_id,
+        text='Привет! Давай сыграем!',
+        reply_markup=reply_markup,
+    )
     return CHOOSING
 
 
 def ask_question(bot, update):
     chat_id = update.message.chat_id
-    question = random.choice(list(tasks_dict.keys()))
+    question = random.choice(list(quiz_set.keys()))
     bot.send_message(chat_id=chat_id, text=question)
     redis_client.set(chat_id, question)
     return CHOOSING
@@ -48,7 +54,7 @@ def check_answer(bot, update):
     chat_id = update.message.chat_id
     question = redis_client.get(chat_id)
     user_answer = update.message.text
-    right_answer = tasks_dict[question]
+    right_answer = quiz_set[question]
     short_right_answer = right_answer.split(':')[1].split('(')[0].split('.')[0].strip()
     if short_right_answer == user_answer:
         score = redis_client.get(f'score_{chat_id}')
@@ -64,7 +70,7 @@ def check_answer(bot, update):
 def skip_question(bot, update):
     chat_id = update.message.chat_id
     question = redis_client.get(chat_id)
-    right_answer = tasks_dict[question]
+    right_answer = quiz_set[question]
     bot.send_message(chat_id=chat_id, text=right_answer)
     return CHOOSING
 
