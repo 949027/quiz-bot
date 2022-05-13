@@ -13,8 +13,6 @@ from questions import get_quiz_set
 env = Env()
 env.read_env()
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 redis_client = redis.Redis(
@@ -85,6 +83,8 @@ def show_score(event, vk_api, keyboard):
 
 
 def main():
+    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                        level=logging.INFO)
     quiz_set = get_quiz_set()
     vk_session = vk.VkApi(token=env('VK_GROUP_TOKEN'))
     vk_api = vk_session.get_api()
