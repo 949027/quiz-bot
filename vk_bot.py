@@ -7,7 +7,7 @@ from vk_api.keyboard import VkKeyboardColor, VkKeyboard
 from vk_api.longpoll import VkLongPoll, VkEventType
 import redis
 
-from questions import get_quiz_set
+from questions import get_quiz
 
 
 env = Env()
@@ -15,18 +15,9 @@ env.read_env()
 
 logger = logging.getLogger(__name__)
 
-redis_client = redis.Redis(
-    host=env('REDIS_URL'),
-    port=env('REDIS_PORT'),
-    charset='utf-8',
-    decode_responses=True,
-    username=env('REDIS_USERNAME'),
-    password=env('REDIS_PASSWORD'),
-)
 
-
-def ask_question(event, vk_api, keyboard, quiz_set):
-    question = random.choice(list(quiz_set.keys()))
+def ask_question(event, vk_api, keyboard, redis_client, quiz):
+    question = random.choice(list(quiz.keys()))
     redis_client.set(event.user_id, question)
     vk_api.messages.send(
         user_id=event.user_id,
@@ -36,10 +27,10 @@ def ask_question(event, vk_api, keyboard, quiz_set):
     )
 
 
-def check_answer(event, vk_api, keyboard, quiz_set):
+def check_answer(event, vk_api, keyboard, redis_client, quiz):
     question = redis_client.get(event.user_id)
     user_answer = event.text
-    right_answer = quiz_set[question].split(':')[1].split('(')[0].split('.')[0].strip()
+    right_answer = quiz[question].split(':')[1].split('(')[0].split('.')[0].strip()
     if right_answer == user_answer:
         score = redis_client.get(f'score_{event.user_id}')
         redis_client.set(f'score_{event.user_id}', int(score) + 1)
@@ -60,9 +51,9 @@ def check_answer(event, vk_api, keyboard, quiz_set):
         )
 
 
-def skip_question(event, vk_api, keyboard, quiz_set):
+def skip_question(event, vk_api, keyboard, redis_client, quiz):
     question = redis_client.get(event.user_id)
-    right_answer = quiz_set[question]
+    right_answer = quiz[question]
     vk_api.messages.send(
         user_id=event.user_id,
         message=right_answer,
@@ -71,7 +62,7 @@ def skip_question(event, vk_api, keyboard, quiz_set):
     )
 
 
-def show_score(event, vk_api, keyboard):
+def show_score(event, vk_api, keyboard, redis_client):
     score = redis_client.get(f'score_{event.user_id}')
     text = f'Набранные очки: {score}'
     vk_api.messages.send(
@@ -85,7 +76,15 @@ def show_score(event, vk_api, keyboard):
 def main():
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                         level=logging.INFO)
-    quiz_set = get_quiz_set()
+    redis_client = redis.Redis(
+        host=env('REDIS_URL'),
+        port=env('REDIS_PORT'),
+        charset='utf-8',
+        decode_responses=True,
+        username=env('REDIS_USERNAME'),
+        password=env('REDIS_PASSWORD'),
+    )
+    quiz = get_quiz()
     vk_session = vk.VkApi(token=env('VK_GROUP_TOKEN'))
     vk_api = vk_session.get_api()
     longpoll = VkLongPoll(vk_session)
@@ -103,13 +102,13 @@ def main():
                     redis_client.set(f'score_{event.user_id}', 0)
 
                 if event.text == 'Новый вопрос':
-                    ask_question(event, vk_api, keyboard, quiz_set)
+                    ask_question(event, vk_api, keyboard, redis_client, quiz)
                 elif event.text == 'Сдаться':
-                    skip_question(event, vk_api, keyboard, quiz_set)
+                    skip_question(event, vk_api, keyboard, redis_client, quiz)
                 elif event.text == 'Мой счет':
-                    show_score(event, vk_api, keyboard)
+                    show_score(event, vk_api, keyboard, redis_client)
                 else:
-                    check_answer(event, vk_api, keyboard, quiz_set)
+                    check_answer(event, vk_api, keyboard, redis_client, quiz)
             except Exception as err:
                 logger.exception(err)
 

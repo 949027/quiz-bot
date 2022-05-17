@@ -1,7 +1,7 @@
 import os
 
 
-def get_quiz_set():
+def get_quiz():
     questions = []
     for path in os.listdir('quiz-questions'):
         with open(f'quiz-questions/{path}', 'r', encoding='KOI8-R') as file:
