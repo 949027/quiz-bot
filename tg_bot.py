@@ -9,8 +9,6 @@ import redis
 
 from questions import get_quiz
 
-env = Env()
-env.read_env()
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +82,9 @@ def error(bot, update, error):
 def main():
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                         level=logging.INFO)
+    env = Env()
+    env.read_env()
+
     redis_client = redis.Redis(
         host=env('REDIS_URL'),
         port=env('REDIS_PORT'),

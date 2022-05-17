@@ -10,9 +10,6 @@ import redis
 from questions import get_quiz
 
 
-env = Env()
-env.read_env()
-
 logger = logging.getLogger(__name__)
 
 
@@ -76,6 +73,9 @@ def show_score(event, vk_api, keyboard, redis_client):
 def main():
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                         level=logging.INFO)
+    env = Env()
+    env.read_env()
+
     redis_client = redis.Redis(
         host=env('REDIS_URL'),
         port=env('REDIS_PORT'),
