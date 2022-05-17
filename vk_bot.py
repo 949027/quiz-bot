@@ -83,6 +83,7 @@ def main():
         decode_responses=True,
         username=env('REDIS_USERNAME'),
         password=env('REDIS_PASSWORD'),
+        db=0,
     )
     quiz = get_quiz()
     vk_session = vk.VkApi(token=env('VK_GROUP_TOKEN'))

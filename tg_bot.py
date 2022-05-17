@@ -92,6 +92,7 @@ def main():
         decode_responses=True,
         username=env('REDIS_USERNAME'),
         password=env('REDIS_PASSWORD'),
+        db=1,
     )
 
     quiz = get_quiz()
